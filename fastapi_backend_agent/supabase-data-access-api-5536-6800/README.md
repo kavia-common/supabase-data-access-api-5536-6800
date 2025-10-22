@@ -1,24 +1,32 @@
-# supabase-data-access-api-5536-6800
+# Supabase Data Access API
 
-FastAPI backend agent that connects to Supabase PostgreSQL and exposes REST endpoints with structured logging and modular architecture.
+FastAPI backend agent that connects to a Supabase PostgreSQL database, exposes REST endpoints to read/query data, and includes structured logging, error handling, and basic observability.
 
-## Quickstart
+Quick start:
+1) Create environment file from example:
+   cp fastapi_backend_agent/.env.example fastapi_backend_agent/.env
 
-1. Create a .env file based on fastapi_backend_agent/.env.example and set:
+2) Edit fastapi_backend_agent/.env and set:
    - SUPABASE_URL
-   - SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY (treat SUPABASE_KEY as the active key; service role preferred if available)
-   - Optionally adjust CORS_ALLOW_ORIGINS, LOG_LEVEL, SUPABASE_SCHEMA
+   - SUPABASE_SERVICE_ROLE_KEY (preferred) or SUPABASE_ANON_KEY
+   - Optional: CORS_ALLOW_ORIGINS, LOG_LEVEL, SUPABASE_SCHEMA
 
-2. Install dependencies:
+3) Install dependencies:
    pip install -r fastapi_backend_agent/requirements.txt
 
-3. Run server:
+4) Run server:
    uvicorn fastapi_backend_agent.src.api.main:app --host 0.0.0.0 --port 3001 --reload
 
-OpenAPI docs at /docs and /openapi.json.
+OpenAPI docs: /docs and /openapi.json
 
-## Notes
+Optional SQL for 'records' table (run in Supabase SQL editor):
+   create table if not exists public.records (
+     id uuid primary key default gen_random_uuid(),
+     title text not null,
+     description text,
+     created_at timestamp with time zone default now()
+   );
 
-- Logging is structured JSON and level is driven by LOG_LEVEL via core.logging setup.
-- CORS is configured from CORS_ALLOW_ORIGINS (comma-separated or * for all).
-- Supabase client is initialized at startup and released on shutdown via the FastAPI lifespan.
+Notes:
+- Use service role key only on the server side. Never expose it to a browser.
+- Metrics available at /metrics (Prometheus text if prometheus-client installed; otherwise JSON).
