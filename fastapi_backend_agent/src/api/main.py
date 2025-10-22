@@ -1,11 +1,56 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from ..core.config import get_settings
-from ..core.errors import AppError, app_error_handler, generic_500_handler, validation_error_handler
+from ..core.errors import (
+    AppError,
+    app_error_handler,
+    generic_500_handler,
+    validation_error_handler,
+)
 from ..core.logging import get_logger
+from ..data.supabase_client import get_client, close_client  # ensure import for lifecycle
 from .routers import health_router, metrics_router, records_router
+
+
+# Lifespan context to initialize logging and Supabase client
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan context.
+
+    - Initializes structured logging based on settings
+    - Configures/warms Supabase client (ensures credentials present)
+    - Yields for application runtime
+    - Performs graceful shutdown cleanup
+    """
+    # Initialize structured logging
+    logger = get_logger(__name__)
+    settings = get_settings()
+    logger.info("Starting application", extra={"log_level": settings.log_level})
+
+    # Initialize Supabase client once on startup to fail fast if misconfigured
+    try:
+        _ = get_client()
+        logger.info("Supabase client initialized")
+    except AppError as exc:
+        # Re-raise to stop app if configuration is invalid
+        logger.error("Supabase initialization failed; shutting down", exc_info=exc)
+        raise
+
+    try:
+        yield
+    finally:
+        # Graceful shutdown: clear client (SDK has no explicit close for sync client)
+        try:
+            close_client()
+        except Exception as exc:
+            logger.error("Error during Supabase client close", exc_info=exc)
+        logger.info("Application shutdown complete")
+
 
 app = FastAPI(
     title="Supabase Data Access API",
@@ -16,6 +61,7 @@ app = FastAPI(
         {"name": "Metrics", "description": "Operational metrics endpoints"},
         {"name": "Records", "description": "CRUD access to records stored in Supabase"},
     ],
+    lifespan=lifespan,
 )
 
 # Configure CORS from settings
@@ -33,9 +79,7 @@ app.add_exception_handler(AppError, app_error_handler)
 app.add_exception_handler(ValueError, lambda request, exc: generic_500_handler(request, exc))  # basic catch
 app.add_exception_handler(Exception, generic_500_handler)
 try:
-    # Pydantic v2 ValidationError import handled in errors.py
     from pydantic import ValidationError as PydanticValidationError  # noqa
-
     app.add_exception_handler(PydanticValidationError, validation_error_handler)
 except Exception:
     pass
@@ -48,7 +92,13 @@ class HealthResponse(BaseModel):
 
 
 # PUBLIC_INTERFACE
-@app.get("/", response_model=HealthResponse, tags=["Health"], summary="Health Check", description="Basic service health check.")
+@app.get(
+    "/",
+    response_model=HealthResponse,
+    tags=["Health"],
+    summary="Health Check",
+    description="Basic service health check.",
+)
 def health_check():
     """Return health status payload."""
     logger = get_logger(__name__)
