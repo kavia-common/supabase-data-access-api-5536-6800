@@ -22,8 +22,8 @@ class _AppSettings(BaseSettings):
         description="Comma-separated list of origins for CORS. e.g. http://localhost:3000,https://example.com or '*'",
     )
 
-    # Supabase
-    SUPABASE_URL: str = Field(..., description="Supabase Project URL")
+    # Supabase (tolerate missing at import/startup; validate on first DB use)
+    SUPABASE_URL: Optional[str] = Field(default=None, description="Supabase Project URL")
     # Prefer service role key if available, otherwise allow anon key; either can be used depending on context
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = Field(
         default=None, description="Supabase service role API key (more privileged)"
@@ -70,7 +70,8 @@ class Settings(BaseModel):
     log_level: str = "INFO"
     cors_allow_origins: List[str] = Field(default_factory=lambda: ["*"])
 
-    supabase_url: str
+    # Tolerate missing Supabase configuration until first DB access
+    supabase_url: Optional[str] = None
     supabase_key: Optional[str] = None
     supabase_schema: str = "public"
 

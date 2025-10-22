@@ -70,7 +70,11 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     - Formats logs as JSON
     - Compatible with uvicorn loggers
     """
-    level = get_settings().log_level
+    # Be resilient if settings are not yet available or invalid at import-startup
+    try:
+        level = get_settings().log_level
+    except Exception:
+        level = "INFO"
     _ensure_root_configured(level)
     return logging.getLogger(name or "app")
 
