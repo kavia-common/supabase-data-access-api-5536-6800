@@ -9,6 +9,7 @@ Quick start:
 2) Edit fastapi_backend_agent/.env and set:
    - SUPABASE_URL
    - SUPABASE_SERVICE_ROLE_KEY (preferred) or SUPABASE_ANON_KEY
+   - Optional legacy fallback: SUPABASE_KEY (deprecated, still supported)
    - Optional: CORS_ALLOW_ORIGINS, LOG_LEVEL, SUPABASE_SCHEMA
 
 3) Install dependencies:
@@ -16,6 +17,11 @@ Quick start:
 
 4) Run server:
    uvicorn fastapi_backend_agent.src.api.main:app --host 0.0.0.0 --port 3001 --reload
+
+Notes on startup:
+- The app attempts to initialize the Supabase client on startup. If credentials are missing or invalid,
+  it will log a warning and continue to start so that health and docs are available.
+  The client will be lazily initialized on first data access request.
 
 OpenAPI docs: /docs and /openapi.json
 

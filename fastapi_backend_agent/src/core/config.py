@@ -46,8 +46,16 @@ class _AppSettings(BaseSettings):
 
     # PUBLIC_INTERFACE
     def get_supabase_key(self) -> Optional[str]:
-        """Return the effective Supabase key preferring service role key over anon key."""
-        return self.SUPABASE_SERVICE_ROLE_KEY or self.SUPABASE_ANON_KEY
+        """
+        Return the effective Supabase key, preferring the service role key over anon key.
+
+        Backward compatibility:
+        - If SUPABASE_SERVICE_ROLE_KEY is not set and SUPABASE_ANON_KEY is not set,
+          fall back to SUPABASE_KEY if present.
+        """
+        # The BaseSettings allows extra envs; fetch legacy SUPABASE_KEY if provided.
+        legacy = getattr(self, "SUPABASE_KEY", None)
+        return self.SUPABASE_SERVICE_ROLE_KEY or self.SUPABASE_ANON_KEY or legacy
 
 
 # PUBLIC_INTERFACE

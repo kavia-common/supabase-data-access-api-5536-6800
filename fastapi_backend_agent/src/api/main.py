@@ -32,14 +32,16 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     logger.info("Starting application", extra={"log_level": settings.log_level})
 
-    # Initialize Supabase client once on startup to fail fast if misconfigured
+    # Attempt to initialize Supabase client on startup, but don't crash if not configured.
+    # Health endpoint should still function; client will be lazily created upon first use.
     try:
         _ = get_client()
         logger.info("Supabase client initialized")
     except AppError as exc:
-        # Re-raise to stop app if configuration is invalid
-        logger.error("Supabase initialization failed; shutting down", exc_info=exc)
-        raise
+        logger.warning(
+            "Supabase initialization skipped or failed; proceeding without DB until first request",
+            exc_info=exc,
+        )
 
     try:
         yield
