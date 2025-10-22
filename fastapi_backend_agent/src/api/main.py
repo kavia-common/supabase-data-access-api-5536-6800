@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from ..core.config import get_settings
 from ..core.errors import AppError, app_error_handler, generic_500_handler, validation_error_handler
 from ..core.logging import get_logger
+from .routers import health_router, metrics_router, records_router
 
 app = FastAPI(
     title="Supabase Data Access API",
@@ -12,6 +13,8 @@ app = FastAPI(
     version="0.1.0",
     openapi_tags=[
         {"name": "Health", "description": "Service health and metadata"},
+        {"name": "Metrics", "description": "Operational metrics endpoints"},
+        {"name": "Records", "description": "CRUD access to records stored in Supabase"},
     ],
 )
 
@@ -51,3 +54,9 @@ def health_check():
     logger = get_logger(__name__)
     logger.info("Health check requested")
     return {"message": "Healthy"}
+
+
+# Include API routers
+app.include_router(health_router)
+app.include_router(metrics_router)
+app.include_router(records_router)
